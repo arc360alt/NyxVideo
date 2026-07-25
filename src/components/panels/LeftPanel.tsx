@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { FaClosedCaptioning, FaFilm, FaMusic, FaShapes, FaShuffle, FaSliders } from 'react-icons/fa6';
+import { FaClosedCaptioning, FaFilm, FaMusic, FaPhotoFilm, FaShapes, FaShuffle, FaSliders } from 'react-icons/fa6';
 import { MediaTab } from './MediaTab';
 import { ShapesTab } from './ShapesTab';
 import { SoundsTab } from './SoundsTab';
 import { EffectsTab } from './EffectsTab';
 import { TransitionsTab } from './TransitionsTab';
 import { CaptionsTab } from './CaptionsTab';
+import { StockContentTab } from './StockContentTab';
 import { ResizeHandle } from '../ResizeHandle';
 import { useLayoutStore } from '../../store/useLayoutStore';
 
@@ -13,6 +14,7 @@ const CATEGORIES = [
   { id: 'media', label: 'Media', icon: FaFilm, Component: MediaTab },
   { id: 'shapes', label: 'Shapes', icon: FaShapes, Component: ShapesTab },
   { id: 'sounds', label: 'Sounds', icon: FaMusic, Component: SoundsTab },
+  { id: 'stock', label: 'Stock Content', icon: FaPhotoFilm, Component: StockContentTab },
   { id: 'effects', label: 'Effects', icon: FaSliders, Component: EffectsTab },
   { id: 'transitions', label: 'Transitions', icon: FaShuffle, Component: TransitionsTab },
   { id: 'captions', label: 'Captions', icon: FaClosedCaptioning, Component: CaptionsTab },

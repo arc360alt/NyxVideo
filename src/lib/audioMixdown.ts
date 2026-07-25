@@ -57,7 +57,25 @@ export async function mixdownAudio(
             source.buffer = buffer;
             source.playbackRate.value = speed;
             const gain = offlineCtx.createGain();
-            gain.gain.value = gainValue;
+
+            // Mirrors computeFadeMultiplier's ramp, but as Web Audio automation events since this
+            // whole mixdown is one non-realtime pass rather than a per-frame gain.value assignment
+            // like the live engine uses.
+            const fadeIn = Math.max(0, Math.min(mc.fadeIn ?? 0, mc.duration));
+            const fadeOut = Math.max(0, Math.min(mc.fadeOut ?? 0, mc.duration));
+            if (fadeIn <= 0 && fadeOut <= 0) {
+              gain.gain.value = gainValue;
+            } else {
+              const clipEnd = Math.min(duration, startTime + mc.duration);
+              gain.gain.setValueAtTime(fadeIn > 0 ? 0 : gainValue, startTime);
+              if (fadeIn > 0) gain.gain.linearRampToValueAtTime(gainValue, Math.min(clipEnd, startTime + fadeIn));
+              if (fadeOut > 0) {
+                const fadeOutStart = Math.max(startTime + fadeIn, clipEnd - fadeOut);
+                gain.gain.setValueAtTime(gainValue, fadeOutStart);
+                gain.gain.linearRampToValueAtTime(0, clipEnd);
+              }
+            }
+
             source.connect(gain).connect(offlineCtx.destination);
             source.start(startTime, sourceOffset, sourceSpan);
           } catch (err) {

@@ -9,7 +9,7 @@ import { WaveformThumb } from './WaveformThumb';
 
 const SNAP_THRESHOLD_PX = 10;
 
-type DragKind = 'move' | 'trim-start' | 'trim-end';
+type DragKind = 'move' | 'trim-start' | 'trim-end' | 'fade-in' | 'fade-out';
 
 interface Props {
   clip: Clip;
@@ -44,6 +44,7 @@ function ClipBlockImpl({ clip, pxPerSecond, asset, trackRowRefs, tracksMeta }: P
   const trimClipEdge = useProjectStore((s) => s.trimClipEdge);
   const setCurrentTime = useProjectStore((s) => s.setCurrentTime);
   const removeAllKeyframesAt = useProjectStore((s) => s.removeAllKeyframesAt);
+  const setClipFade = useProjectStore((s) => s.setClipFade);
 
   const dragRef = useRef<{
     kind: DragKind;
@@ -53,6 +54,8 @@ function ClipBlockImpl({ clip, pxPerSecond, asset, trackRowRefs, tracksMeta }: P
     groupIds: string[] | null;
   } | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+  const fadeInRef = useRef<HTMLDivElement>(null);
+  const fadeOutRef = useRef<HTMLDivElement>(null);
 
   const selected = selectedClipIds.includes(clip.id);
   const Icon = KIND_ICON[clip.kind];
@@ -112,11 +115,19 @@ function ClipBlockImpl({ clip, pxPerSecond, asset, trackRowRefs, tracksMeta }: P
         el.style.left = `${newStart * pxPerSecond}px`;
         el.style.width = `${Math.max(4, (drag.startClip.start + drag.startClip.duration - newStart) * pxPerSecond)}px`;
         el.dataset.pendingTrim = String(newStart);
-      } else {
+      } else if (drag.kind === 'trim-end') {
         let newEnd = Math.max(drag.startClip.start + 0.1, drag.startClip.start + drag.startClip.duration + dxTime);
         if (snapEnabled) newEnd = snapValue(newEnd, snapPoints, snapThreshold);
         el.style.width = `${Math.max(4, (newEnd - drag.startClip.start) * pxPerSecond)}px`;
         el.dataset.pendingTrim = String(newEnd);
+      } else if (drag.kind === 'fade-in') {
+        const newFade = Math.max(0, Math.min(drag.startClip.duration, (drag.startClip.fadeIn ?? 0) + dxTime));
+        if (fadeInRef.current) fadeInRef.current.style.width = `${newFade * pxPerSecond}px`;
+        el.dataset.pendingFade = String(newFade);
+      } else if (drag.kind === 'fade-out') {
+        const newFade = Math.max(0, Math.min(drag.startClip.duration, (drag.startClip.fadeOut ?? 0) - dxTime));
+        if (fadeOutRef.current) fadeOutRef.current.style.width = `${newFade * pxPerSecond}px`;
+        el.dataset.pendingFade = String(newFade);
       }
     };
 
@@ -136,10 +147,15 @@ function ClipBlockImpl({ clip, pxPerSecond, asset, trackRowRefs, tracksMeta }: P
           trimClipEdge(clip.id, 'start', Number(el.dataset.pendingTrim ?? drag.startClip.start));
         } else if (drag.kind === 'trim-end') {
           trimClipEdge(clip.id, 'end', Number(el.dataset.pendingTrim ?? drag.startClip.start + drag.startClip.duration));
+        } else if (drag.kind === 'fade-in') {
+          setClipFade(clip.id, 'in', Number(el.dataset.pendingFade ?? drag.startClip.fadeIn ?? 0));
+        } else if (drag.kind === 'fade-out') {
+          setClipFade(clip.id, 'out', Number(el.dataset.pendingFade ?? drag.startClip.fadeOut ?? 0));
         }
         delete el.dataset.pendingStart;
         delete el.dataset.pendingTrack;
         delete el.dataset.pendingTrim;
+        delete el.dataset.pendingFade;
       }
       dragRef.current = null;
       endGuard();
@@ -155,7 +171,7 @@ function ClipBlockImpl({ clip, pxPerSecond, asset, trackRowRefs, tracksMeta }: P
     <div
       ref={previewRef}
       onPointerDown={startDrag('move')}
-      className={`absolute top-1 flex h-[calc(100%-8px)] select-none flex-col overflow-hidden rounded-md border ${KIND_COLORS[clip.kind]} ${
+      className={`group absolute top-1 flex h-[calc(100%-8px)] select-none flex-col overflow-hidden rounded-md border ${KIND_COLORS[clip.kind]} ${
         selected ? 'ring-2 ring-violet-400' : ''
       }`}
       style={{ left: clip.start * pxPerSecond, width: Math.max(4, clip.duration * pxPerSecond) }}
@@ -183,6 +199,27 @@ function ClipBlockImpl({ clip, pxPerSecond, asset, trackRowRefs, tracksMeta }: P
       <div
         onPointerDown={startDrag('trim-end')}
         className="absolute right-0 top-0 h-full w-2 cursor-ew-resize hover:bg-white/20"
+      />
+      {/* Fade in/out — a dedicated single-clip fade, no partner clip needed unlike the Transition system. */}
+      <div
+        ref={fadeInRef}
+        className="pointer-events-none absolute left-0 top-0 h-full bg-black/55"
+        style={{ width: (clip.fadeIn ?? 0) * pxPerSecond, clipPath: 'polygon(0 0, 100% 0, 0 100%)' }}
+      />
+      <div
+        ref={fadeOutRef}
+        className="pointer-events-none absolute right-0 top-0 h-full bg-black/55"
+        style={{ width: (clip.fadeOut ?? 0) * pxPerSecond, clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }}
+      />
+      <div
+        onPointerDown={startDrag('fade-in')}
+        title="Drag to fade in from silence/transparent"
+        className="absolute left-0.5 top-0.5 z-20 h-2.5 w-2.5 cursor-ew-resize rounded-full border border-white/70 bg-black/60 opacity-0 hover:bg-violet-500 group-hover:opacity-100"
+      />
+      <div
+        onPointerDown={startDrag('fade-out')}
+        title="Drag to fade out to silence/transparent"
+        className="absolute right-0.5 top-0.5 z-20 h-2.5 w-2.5 cursor-ew-resize rounded-full border border-white/70 bg-black/60 opacity-0 hover:bg-violet-500 group-hover:opacity-100"
       />
       {keyframeTimes.map((t) => (
         <button

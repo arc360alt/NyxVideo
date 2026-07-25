@@ -1,5 +1,5 @@
 import type { Clip, MediaAsset, MediaClip, Project, ShapeClip, TextClip, Transform } from '../types';
-import { isClipActive } from './clipUtils';
+import { isClipActive, computeFadeMultiplier } from './clipUtils';
 import { buildFilterString } from './filters';
 import { buildShapePath, isStrokeOnlyShape } from './shapes';
 import { resolveTransform } from './keyframes';
@@ -179,7 +179,12 @@ export function drawFrame(
 
   const drawSingleClip = (clip: Clip) => {
     const localTime = t - clip.start;
-    const transform = 'transform' in clip ? resolveTransform(clip, localTime) : null;
+    const baseTransform = 'transform' in clip ? resolveTransform(clip, localTime) : null;
+    // Fade in/out is a render-time-only effect layered on top of the authored opacity — applied
+    // here rather than inside resolveTransform so the Inspector still shows the clip's actual
+    // authored opacity instead of a value that jumps around as the playhead crosses a fade window.
+    const fadeMultiplier = computeFadeMultiplier(clip, localTime);
+    const transform = baseTransform && fadeMultiplier < 1 ? { ...baseTransform, opacity: baseTransform.opacity * fadeMultiplier } : baseTransform;
     if (clip.id === opts.selectedClipId) {
       selectedClip = clip;
       selectedTransform = transform;

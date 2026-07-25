@@ -59,6 +59,7 @@ export function Inspector() {
   const toggleMute = useProjectStore((s) => s.toggleMute);
   const setClipSpeed = useProjectStore((s) => s.setClipSpeed);
   const setClipPreservePitch = useProjectStore((s) => s.setClipPreservePitch);
+  const setClipFade = useProjectStore((s) => s.setClipFade);
   const updateShapeStyle = useProjectStore((s) => s.updateShapeStyle);
   const updateShapeType = useProjectStore((s) => s.updateShapeType);
   const updateText = useProjectStore((s) => s.updateText);
@@ -220,6 +221,41 @@ export function Inspector() {
             <FiTrash2 size={12} /> Delete
           </button>
         </div>
+      </div>
+
+      <div>
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-faint">Fade</div>
+        <p className="mb-1.5 text-[10px] text-fg-faint">
+          Fades this clip in or out on its own — no partner clip needed, e.g. for a "fade to black" ending.
+        </p>
+        <label className="flex flex-col gap-1 text-xs text-fg-subtle">
+          <span className="flex justify-between">
+            <span>Fade In</span>
+            <span className="text-fg-faint">{(clip.fadeIn ?? 0).toFixed(1)}s</span>
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={clip.duration}
+            step={0.1}
+            value={Math.min(clip.duration, clip.fadeIn ?? 0)}
+            onChange={(e) => setClipFade(clip.id, 'in', Number(e.target.value))}
+          />
+        </label>
+        <label className="mt-2 flex flex-col gap-1 text-xs text-fg-subtle">
+          <span className="flex justify-between">
+            <span>Fade Out</span>
+            <span className="text-fg-faint">{(clip.fadeOut ?? 0).toFixed(1)}s</span>
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={clip.duration}
+            step={0.1}
+            value={Math.min(clip.duration, clip.fadeOut ?? 0)}
+            onChange={(e) => setClipFade(clip.id, 'out', Number(e.target.value))}
+          />
+        </label>
       </div>
 
       {mediaClip && (mediaClip.kind === 'video' || mediaClip.kind === 'audio') && (

@@ -1,5 +1,5 @@
 import type { MediaAsset, MediaClip, Project, Track } from '../types';
-import { computeGain, isClipActive } from './clipUtils';
+import { computeFadeMultiplier, computeGain, isClipActive } from './clipUtils';
 
 /** Sets preservesPitch across the standardized + legacy vendor-prefixed property names. */
 function applyPreservesPitch(el: HTMLMediaElement, preserve: boolean) {
@@ -205,7 +205,7 @@ export class CompositionEngine {
 
         const el = mc.kind === 'video' ? this.getVideoElement(asset) : this.getAudioElement(asset);
         const gain = this.ensureRouting(el);
-        gain.gain.value = computeGain(mc, track);
+        gain.gain.value = computeGain(mc, track) * computeFadeMultiplier(mc, t - mc.start);
 
         const speed = mc.speed || 1;
         try {

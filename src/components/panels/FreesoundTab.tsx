@@ -78,8 +78,8 @@ export function FreesoundTab() {
   return (
     <div className="flex h-full flex-col gap-3 p-3">
       {hasEnvApiKey() ? (
-        <div className="rounded-md border border-border bg-surface-1 px-2.5 py-1.5 text-[10px] text-fg-faint">
-          Using the Freesound API key configured for this app.
+        <div>
+          
         </div>
       ) : (
         <div className="rounded-md border border-border bg-surface-1 p-2.5 text-xs">

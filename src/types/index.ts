@@ -109,6 +109,10 @@ interface BaseClip {
   keyframes?: KeyframeSet;
   /** marks a clip as a frozen-frame still, for icon/labeling purposes */
   isFreezeFrame?: boolean;
+  /** seconds to ramp in from transparent (and, for media clips, silent) at the start of the clip */
+  fadeIn?: number;
+  /** seconds to ramp out to transparent (and, for media clips, silent) at the end of the clip — the "fade to black" a clip needs no partner to do */
+  fadeOut?: number;
 }
 
 export interface MediaClip extends BaseClip {

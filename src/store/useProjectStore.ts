@@ -174,6 +174,8 @@ interface EditorState {
   toggleMute: (clipId: string) => void;
   setClipSpeed: (clipId: string, speed: number) => void;
   setClipPreservePitch: (clipId: string, preserve: boolean) => void;
+  /** Sets a clip's fade-in or fade-out duration (seconds), clamped to [0, clip.duration] — no partner clip needed, unlike the two-clip Transition system. */
+  setClipFade: (clipId: string, edge: 'in' | 'out', seconds: number) => void;
   applySilenceRemoval: (clipId: string, keepSegments: KeepSegment[]) => void;
   splitKeepSide: (clipId: string, atTime: number, side: 'left' | 'right') => void;
   insertFreezeFrame: (clipId: string, atTime: number, durationSec?: number) => Promise<void>;
@@ -818,13 +820,15 @@ export const useProjectStore = create<EditorState>((set, get) => ({
 
         const firstDuration = atTime - clip.start;
         const secondDuration = clip.duration - firstDuration;
-        const first: Clip = { ...clip, duration: firstDuration };
+        // Only the half that still touches the original edge keeps that edge's fade — otherwise
+        // both halves would fade at the new cut point too, which isn't what splitting a clip means.
+        const first: Clip = { ...clip, duration: firstDuration, fadeOut: 0 };
         let second: Clip;
         if ('assetId' in clip) {
           const mc = clip as MediaClip;
-          second = { ...mc, id: newId(), start: atTime, duration: secondDuration, sourceIn: mc.sourceIn + firstDuration * (mc.speed || 1) };
+          second = { ...mc, id: newId(), start: atTime, duration: secondDuration, sourceIn: mc.sourceIn + firstDuration * (mc.speed || 1), fadeIn: 0 };
         } else {
-          second = { ...(clip as ShapeClip | TextClip), id: newId(), start: atTime, duration: secondDuration } as Clip;
+          second = { ...(clip as ShapeClip | TextClip), id: newId(), start: atTime, duration: secondDuration, fadeIn: 0 } as Clip;
         }
         const newClips = [...t.clips];
         newClips.splice(idx, 1, first, second);
@@ -1166,6 +1170,21 @@ export const useProjectStore = create<EditorState>((set, get) => ({
         tracks: s.project.tracks.map((t) => ({
           ...t,
           clips: t.clips.map((c) => (c.id === clipId && 'assetId' in c ? { ...c, preservePitch: preserve } : c)),
+        })),
+      },
+    })),
+
+  setClipFade: (clipId, edge, seconds) =>
+    set((s) => ({
+      project: {
+        ...s.project,
+        tracks: s.project.tracks.map((t) => ({
+          ...t,
+          clips: t.clips.map((c) => {
+            if (c.id !== clipId) return c;
+            const clamped = Math.max(0, Math.min(seconds, c.duration));
+            return edge === 'in' ? { ...c, fadeIn: clamped } : { ...c, fadeOut: clamped };
+          }),
         })),
       },
     })),
