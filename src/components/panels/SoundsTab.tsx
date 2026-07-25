@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { SOUND_EFFECTS, renderAndCacheSfx } from '../../lib/soundEffects';
 import { useProjectStore } from '../../store/useProjectStore';
+import { FreesoundTab } from './FreesoundTab';
 import { FiPause, FiPlay, FiPlus } from 'react-icons/fi';
 
 const CATEGORIES = Array.from(new Set(SOUND_EFFECTS.map((s) => s.category)));
 
-export function SoundsTab() {
+function BuiltInSounds() {
   const addSoundEffectToTimeline = useProjectStore((s) => s.addSoundEffectToTimeline);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null);
@@ -65,6 +66,30 @@ export function SoundsTab() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+export function SoundsTab() {
+  const [source, setSource] = useState<'builtin' | 'freesound'>('builtin');
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex shrink-0 gap-1 border-b border-border p-2">
+        <button
+          onClick={() => setSource('builtin')}
+          className={`flex-1 rounded px-2 py-1 text-xs ${source === 'builtin' ? 'bg-violet-600 text-white' : 'bg-surface-1 text-fg-muted hover:bg-surface-2'}`}
+        >
+          Built-in
+        </button>
+        <button
+          onClick={() => setSource('freesound')}
+          className={`flex-1 rounded px-2 py-1 text-xs ${source === 'freesound' ? 'bg-violet-600 text-white' : 'bg-surface-1 text-fg-muted hover:bg-surface-2'}`}
+        >
+          Freesound
+        </button>
+      </div>
+      <div className="min-h-0 flex-1">{source === 'builtin' ? <BuiltInSounds /> : <FreesoundTab />}</div>
     </div>
   );
 }
