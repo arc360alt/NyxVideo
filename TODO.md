@@ -1,3 +1,2 @@
-- Add a Stock Media tab where you can just get stock photos and videos
 - Add more text styling features
 - Fix the editor lagging like hell even on a good CPU and GPU when theres lots of clips (seen when using the Silence Detection feature)
