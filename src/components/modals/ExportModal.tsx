@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { Modal } from './Modal';
 import { projectDuration } from '../../lib/time';
+import { RESOLUTION_PRESETS, EXPORT_QUALITY_LABELS, type ExportQuality } from '../../lib/exportQuality';
 import { FiDownload } from 'react-icons/fi';
 
 // Dynamically imported — this pulls in mediabunny (WebCodecs muxing) and the ffmpeg.wasm fallback,
@@ -9,6 +10,8 @@ import { FiDownload } from 'react-icons/fi';
 const loadExportLib = () => import('../../lib/export');
 
 type Phase = 'idle' | 'audio' | 'render' | 'transcode' | 'done' | 'error';
+
+const QUALITY_OPTIONS: ExportQuality[] = ['very-low', 'low', 'medium', 'high', 'very-high'];
 
 export function ExportModal() {
   const open = useProjectStore((s) => s.exportModalOpen);
@@ -19,11 +22,16 @@ export function ExportModal() {
 
   const [format, setFormat] = useState<'webm' | 'mp4'>('webm');
   const [fps, setFps] = useState(30);
+  const [quality, setQuality] = useState<ExportQuality>('high');
+  // null = export at the project's own resolution
+  const [resolutionHeight, setResolutionHeight] = useState<number | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  const resolutionOptions = RESOLUTION_PRESETS.filter((h) => h < project.height);
 
   if (!open) return null;
 
@@ -55,6 +63,8 @@ export function ExportModal() {
       const blob = await exportProject(project, {
         fps,
         format,
+        quality,
+        resolutionHeight,
         signal: controller.signal,
         onProgress: (p, r) => {
           setPhase(p);
@@ -104,6 +114,45 @@ export function ExportModal() {
             </button>
           </div>
         </div>
+
+        <div>
+          <div className="mb-1 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-fg-faint">
+            <span>Quality</span>
+            <span className="normal-case text-fg-faint">lower = faster to encode, smaller file</span>
+          </div>
+          <div className="flex gap-1">
+            {QUALITY_OPTIONS.map((q) => (
+              <button
+                key={q}
+                disabled={busy}
+                onClick={() => setQuality(q)}
+                className={`flex-1 rounded-md border py-1.5 text-[10px] ${quality === q ? 'border-violet-500 bg-violet-950 text-violet-200' : 'border-border bg-surface-1 text-fg-muted'}`}
+              >
+                {EXPORT_QUALITY_LABELS[q]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <label className="flex flex-col gap-1 text-xs text-fg-subtle">
+          <span>Resolution</span>
+          <select
+            disabled={busy}
+            value={resolutionHeight ?? 'original'}
+            onChange={(e) => setResolutionHeight(e.target.value === 'original' ? null : Number(e.target.value))}
+            className="rounded border border-border bg-surface-1 px-2 py-1.5 text-xs text-fg"
+          >
+            <option value="original">
+              Original ({project.width}×{project.height})
+            </option>
+            {resolutionOptions.map((h) => (
+              <option key={h} value={h}>
+                {h}p ({Math.round((project.width * h) / project.height)}×{h})
+              </option>
+            ))}
+          </select>
+          <p className="text-[10px] text-fg-faint">Exporting smaller than the project's own resolution renders and encodes faster.</p>
+        </label>
 
         <label className="flex flex-col gap-1 text-xs text-fg-subtle">
           <span className="flex justify-between">

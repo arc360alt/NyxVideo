@@ -11,6 +11,37 @@
   --color-fg-muted: #d4d4d8;
   --color-fg-subtle: #a1a1aa;
   --color-fg-faint: #71717a;
+
+  /*
+   * App accent color. Overrides Tailwind's built-in violet and fuchsia scales (rather than
+   * introducing a differently-named token) so every existing violet- and fuchsia- utility class
+   * across the app picks this up automatically: a deliberate, single, muted indigo instead of the
+   * brighter violet-to-fuchsia gradient look. Both scales point at the same values so the app reads
+   * as one consistent accent instead of a two-tone purple and pink scheme.
+   */
+  --color-violet-50: #eef1fb;
+  --color-violet-100: #dce4f7;
+  --color-violet-200: #b9c9ef;
+  --color-violet-300: #91a8e3;
+  --color-violet-400: #6684d4;
+  --color-violet-500: #4863bf;
+  --color-violet-600: #3a4fa0;
+  --color-violet-700: #303f83;
+  --color-violet-800: #2a3569;
+  --color-violet-900: #262e56;
+  --color-violet-950: #171a35;
+
+  --color-fuchsia-50: #eef1fb;
+  --color-fuchsia-100: #dce4f7;
+  --color-fuchsia-200: #b9c9ef;
+  --color-fuchsia-300: #91a8e3;
+  --color-fuchsia-400: #6684d4;
+  --color-fuchsia-500: #4863bf;
+  --color-fuchsia-600: #3a4fa0;
+  --color-fuchsia-700: #303f83;
+  --color-fuchsia-800: #2a3569;
+  --color-fuchsia-900: #262e56;
+  --color-fuchsia-950: #171a35;
 }
 
 :root {
@@ -80,7 +111,7 @@ input[type='range']::-webkit-slider-thumb {
   width: 13px;
   height: 13px;
   border-radius: 50%;
-  background: #a78bfa;
+  background: var(--color-violet-400);
   cursor: pointer;
 }
 

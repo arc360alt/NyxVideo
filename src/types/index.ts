@@ -115,6 +115,22 @@ interface BaseClip {
   fadeOut?: number;
 }
 
+export interface ChromaKeySettings {
+  enabled: boolean;
+  color: string; // hex, the color to key out
+  similarity: number; // 0-100, how close a pixel's chroma needs to be to the key color to be removed
+  smoothness: number; // 0-100, width of the soft edge between kept and removed
+  spill: number; // 0-100, how strongly to desaturate the key color's cast on remaining edge pixels
+}
+
+export const DEFAULT_CHROMA_KEY: ChromaKeySettings = {
+  enabled: false,
+  color: '#00ff00',
+  similarity: 40,
+  smoothness: 15,
+  spill: 50,
+};
+
 export interface MediaClip extends BaseClip {
   kind: 'video' | 'audio' | 'image';
   assetId: string;
@@ -125,6 +141,8 @@ export interface MediaClip extends BaseClip {
   speed: number;
   /** when true, browser compensates pitch shift caused by non-1 speed (time-stretch); when false, pitch shifts naturally with speed */
   preservePitch: boolean;
+  /** green/blue-screen removal — only meaningful for video/image kind, absent or enabled:false means no keying */
+  chromaKey?: ChromaKeySettings;
   transform: Transform;
   effects: EffectParams;
 }

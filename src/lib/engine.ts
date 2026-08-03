@@ -78,15 +78,14 @@ export class CompositionEngine {
   }
 
   /**
-   * Draws the current video frame, falling back to the last successfully decoded
-   * frame while a seek/load is in flight. Cut points (especially many short clips
-   * back-to-back, as silence removal produces) otherwise flash black for the
-   * moment the browser needs to seek the shared <video> element.
+   * Resolves what should currently be drawn for a video element — the export frame override if one
+   * is set, else the live decoded frame, else the last successfully decoded frame while a seek/load
+   * is in flight. Shared by drawVideoFrame (the normal path) and the chroma-key path in draw.ts, so
+   * both agree on "what frame is this clip showing right now" without duplicating the fallback logic.
    */
-  drawVideoFrame(ctx: CanvasRenderingContext2D, el: HTMLVideoElement, dx: number, dy: number, dw: number, dh: number): boolean {
+  resolveVideoSource(el: HTMLVideoElement): { source: CanvasImageSource; width: number; height: number } | null {
     const override = this.exportFrameOverrides.get(el);
     if (override) {
-      ctx.drawImage(override, dx, dy, dw, dh);
       // Keep the frame-size cache current too, since mediaElementSize() (used for blurred
       // backgrounds) reads from it and the live element's own readyState/videoWidth stay stale
       // for the whole fast export (its content is never actually loaded/seeked in that path).
@@ -99,10 +98,9 @@ export class CompositionEngine {
         cache.width = override.width;
         cache.height = override.height;
       }
-      return true;
+      return { source: override, width: override.width, height: override.height };
     }
     if (el.readyState >= 2 && el.videoWidth > 0) {
-      ctx.drawImage(el, dx, dy, dw, dh);
       let cache = this.lastFrameCache.get(el);
       if (!cache) {
         cache = document.createElement('canvas');
@@ -113,14 +111,24 @@ export class CompositionEngine {
         cache.height = el.videoHeight;
       }
       cache.getContext('2d')?.drawImage(el, 0, 0);
-      return true;
+      return { source: el, width: el.videoWidth, height: el.videoHeight };
     }
     const cache = this.lastFrameCache.get(el);
-    if (cache) {
-      ctx.drawImage(cache, dx, dy, dw, dh);
-      return true;
-    }
-    return false;
+    if (cache) return { source: cache, width: cache.width, height: cache.height };
+    return null;
+  }
+
+  /**
+   * Draws the current video frame, falling back to the last successfully decoded
+   * frame while a seek/load is in flight. Cut points (especially many short clips
+   * back-to-back, as silence removal produces) otherwise flash black for the
+   * moment the browser needs to seek the shared <video> element.
+   */
+  drawVideoFrame(ctx: CanvasRenderingContext2D, el: HTMLVideoElement, dx: number, dy: number, dw: number, dh: number): boolean {
+    const resolved = this.resolveVideoSource(el);
+    if (!resolved) return false;
+    ctx.drawImage(resolved.source, dx, dy, dw, dh);
+    return true;
   }
 
   getCachedFrameSize(el: HTMLVideoElement): [number, number] | null {

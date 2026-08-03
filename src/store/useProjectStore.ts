@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type {
+  ChromaKeySettings,
   Clip,
   ClipKind,
   EffectParams,
@@ -18,7 +19,7 @@ import type {
   Transition,
   TransitionType,
 } from '../types';
-import { DEFAULT_BACKGROUND, DEFAULT_EFFECTS } from '../types';
+import { DEFAULT_BACKGROUND, DEFAULT_CHROMA_KEY, DEFAULT_EFFECTS } from '../types';
 import { captureVideoFrame } from '../lib/freezeFrame';
 import { withKeyframe, withoutKeyframe, propHasKeyframes, KEYFRAME_PROPS } from '../lib/keyframes';
 import { newId } from '../lib/id';
@@ -112,6 +113,7 @@ interface EditorState {
   zoomToScrubberEnabled: boolean;
   pxPerSecond: number;
   silenceModalClipId: string | null;
+  chromaKeyModalClipId: string | null;
   exportModalOpen: boolean;
   projectSettingsModalOpen: boolean;
   hotkeysModalOpen: boolean;
@@ -159,6 +161,7 @@ interface EditorState {
   removeTransition: (id: string) => void;
   selectTransition: (id: string | null) => void;
   moveClip: (clipId: string, trackId: string, start: number) => void;
+  canMoveClip: (clipId: string, trackId: string, start: number) => boolean;
   trimClipEdge: (clipId: string, edge: 'start' | 'end', timelineTime: number) => void;
   splitClipAtTime: (clipId: string, atTime: number) => void;
   deleteClip: (clipId: string) => void;
@@ -176,6 +179,8 @@ interface EditorState {
   setClipPreservePitch: (clipId: string, preserve: boolean) => void;
   /** Sets a clip's fade-in or fade-out duration (seconds), clamped to [0, clip.duration] — no partner clip needed, unlike the two-clip Transition system. */
   setClipFade: (clipId: string, edge: 'in' | 'out', seconds: number) => void;
+  /** Sets (or partially updates) a media clip's chroma-key settings. Creates them from the default if the clip doesn't have any yet. */
+  setChromaKey: (clipId: string, partial: Partial<ChromaKeySettings>) => void;
   applySilenceRemoval: (clipId: string, keepSegments: KeepSegment[]) => void;
   splitKeepSide: (clipId: string, atTime: number, side: 'left' | 'right') => void;
   insertFreezeFrame: (clipId: string, atTime: number, durationSec?: number) => Promise<void>;
@@ -202,6 +207,8 @@ interface EditorState {
   // modals
   openSilenceModal: (clipId: string) => void;
   closeSilenceModal: () => void;
+  openChromaKeyModal: (clipId: string) => void;
+  closeChromaKeyModal: () => void;
   setExportModalOpen: (open: boolean) => void;
   setProjectSettingsModalOpen: (open: boolean) => void;
   setHotkeysModalOpen: (open: boolean) => void;
@@ -227,6 +234,7 @@ export const useProjectStore = create<EditorState>((set, get) => ({
   zoomToScrubberEnabled: localStorage.getItem('nyxvideo:zoomToScrubber') !== 'false',
   pxPerSecond: 80,
   silenceModalClipId: null,
+  chromaKeyModalClipId: null,
   exportModalOpen: false,
   projectSettingsModalOpen: false,
   hotkeysModalOpen: false,
@@ -252,6 +260,7 @@ export const useProjectStore = create<EditorState>((set, get) => ({
       selectedClipIds: [],
       selectedTransitionId: null,
       silenceModalClipId: null,
+      chromaKeyModalClipId: null,
     });
   },
 
@@ -266,6 +275,7 @@ export const useProjectStore = create<EditorState>((set, get) => ({
       selectedClipIds: [],
       selectedTransitionId: null,
       silenceModalClipId: null,
+      chromaKeyModalClipId: null,
     });
   },
 
@@ -466,7 +476,7 @@ export const useProjectStore = create<EditorState>((set, get) => ({
       start,
       duration,
       shapeType,
-      style: { fill: '#a78bfa', stroke: '#ffffff', strokeWidth: 0 },
+      style: { fill: '#6684d4', stroke: '#ffffff', strokeWidth: 0 },
       transform: {
         x: state.project.width / 2,
         y: state.project.height / 2,
@@ -769,6 +779,22 @@ export const useProjectStore = create<EditorState>((set, get) => ({
         : s.project.transitions;
       return { project: { ...s.project, tracks, transitions } };
     }),
+
+  // Read-only predicate mirroring moveClip's own validity checks, so drag UIs can preview
+  // whether a given drop target is legal without duplicating (and risking drifting from) the
+  // actual mutation's rules.
+  canMoveClip: (clipId, trackId, start) => {
+    const s = get();
+    const clampedStart = Math.max(0, start);
+    const targetTrack = s.project.tracks.find((t) => t.id === trackId);
+    if (!targetTrack || targetTrack.locked) return false;
+    const clip = s.project.tracks.flatMap((t) => t.clips).find((c) => c.id === clipId);
+    if (!clip) return false;
+    if (targetTrack.kind === 'audio' && clip.kind !== 'audio') return false;
+    if (targetTrack.kind === 'video' && clip.kind === 'audio') return false;
+    if (overlaps(targetTrack, clampedStart, clip.duration, clipId, s.project.transitions)) return false;
+    return true;
+  },
 
   trimClipEdge: (clipId, edge, timelineTime) =>
     set((s) => {
@@ -1189,6 +1215,21 @@ export const useProjectStore = create<EditorState>((set, get) => ({
       },
     })),
 
+  setChromaKey: (clipId, partial) =>
+    set((s) => ({
+      project: {
+        ...s.project,
+        tracks: s.project.tracks.map((t) => ({
+          ...t,
+          clips: t.clips.map((c) =>
+            c.id === clipId && 'assetId' in c
+              ? { ...c, chromaKey: { ...DEFAULT_CHROMA_KEY, ...(c as MediaClip).chromaKey, ...partial } }
+              : c,
+          ),
+        })),
+      },
+    })),
+
   setKeyframe: (clipId, prop, localTime, value) =>
     set((s) => ({
       project: {
@@ -1331,6 +1372,8 @@ export const useProjectStore = create<EditorState>((set, get) => ({
 
   openSilenceModal: (clipId) => set({ silenceModalClipId: clipId }),
   closeSilenceModal: () => set({ silenceModalClipId: null }),
+  openChromaKeyModal: (clipId) => set({ chromaKeyModalClipId: clipId }),
+  closeChromaKeyModal: () => set({ chromaKeyModalClipId: null }),
   setExportModalOpen: (open) => set({ exportModalOpen: open }),
   setProjectSettingsModalOpen: (open) => set({ projectSettingsModalOpen: open }),
   setHotkeysModalOpen: (open) => set({ hotkeysModalOpen: open }),

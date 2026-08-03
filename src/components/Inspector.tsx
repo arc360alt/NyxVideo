@@ -6,9 +6,10 @@ import { SHAPE_LIBRARY } from '../lib/shapes';
 import { resolveTransform, propHasKeyframes, keyframeAt } from '../lib/keyframes';
 import { TRANSITION_LIBRARY } from '../lib/transitions';
 import { ResizeHandle } from './ResizeHandle';
+import { ColorInput } from './ColorInput';
 import { FiCopy, FiScissors, FiTrash2, FiVolume2, FiVolumeX } from 'react-icons/fi';
 import { MdGraphicEq } from 'react-icons/md';
-import { FaTrash } from 'react-icons/fa6';
+import { FaDroplet, FaTrash } from 'react-icons/fa6';
 
 const FONTS = ['system-ui, sans-serif', 'Georgia, serif', '"Courier New", monospace', '"Comic Sans MS", cursive', 'Impact, sans-serif'];
 
@@ -68,6 +69,7 @@ export function Inspector() {
   const splitClipAtTime = useProjectStore((s) => s.splitClipAtTime);
   const currentTime = useProjectStore((s) => s.currentTime);
   const openSilenceModal = useProjectStore((s) => s.openSilenceModal);
+  const openChromaKeyModal = useProjectStore((s) => s.openChromaKeyModal);
 
   const [speedDraft, setSpeedDraft] = useState('1');
   useEffect(() => {
@@ -337,6 +339,22 @@ export function Inspector() {
         </div>
       )}
 
+      {mediaClip && (mediaClip.kind === 'video' || mediaClip.kind === 'image') && (
+        <div>
+          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-faint">Visual</div>
+          <button
+            onClick={() => openChromaKeyModal(mediaClip.id)}
+            className={`flex w-full items-center justify-center gap-2 rounded-md border py-1.5 text-xs ${
+              mediaClip.chromaKey?.enabled
+                ? 'border-violet-500 bg-violet-950 text-violet-200'
+                : 'border-border-strong bg-surface-1 text-fg hover:border-violet-500 hover:text-violet-300'
+            }`}
+          >
+            <FaDroplet size={12} /> Chroma Key{mediaClip.chromaKey?.enabled ? ' (on)' : '…'}
+          </button>
+        </div>
+      )}
+
       {t && clip && (
         <div>
           <div className="mb-1 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-fg-faint">
@@ -439,19 +457,17 @@ export function Inspector() {
           <div className="grid grid-cols-2 gap-2 text-xs text-fg-subtle">
             <label className="flex flex-col gap-1">
               Fill
-              <input
-                type="color"
+              <ColorInput
                 value={(clip as ShapeClip).style.fill}
-                onChange={(e) => updateShapeStyle(clip.id, { fill: e.target.value })}
+                onChange={(v) => updateShapeStyle(clip.id, { fill: v })}
                 className="h-8 w-full rounded border border-border bg-surface-1"
               />
             </label>
             <label className="flex flex-col gap-1">
               Stroke
-              <input
-                type="color"
+              <ColorInput
                 value={(clip as ShapeClip).style.stroke}
-                onChange={(e) => updateShapeStyle(clip.id, { stroke: e.target.value })}
+                onChange={(v) => updateShapeStyle(clip.id, { stroke: v })}
                 className="h-8 w-full rounded border border-border bg-surface-1"
               />
             </label>
@@ -501,10 +517,9 @@ export function Inspector() {
             </label>
             <label className="flex flex-col gap-1">
               Color
-              <input
-                type="color"
+              <ColorInput
                 value={(clip as TextClip).color}
-                onChange={(e) => updateText(clip.id, { color: e.target.value })}
+                onChange={(v) => updateText(clip.id, { color: v })}
                 className="h-8 w-full rounded border border-border bg-surface-1"
               />
             </label>
@@ -542,10 +557,9 @@ export function Inspector() {
               Background
             </span>
             {(clip as TextClip).backgroundColor && (
-              <input
-                type="color"
+              <ColorInput
                 value={rgbaToHex((clip as TextClip).backgroundColor!)}
-                onChange={(e) => updateText(clip.id, { backgroundColor: hexToRgba(e.target.value, 0.6) })}
+                onChange={(v) => updateText(clip.id, { backgroundColor: hexToRgba(v, 0.6) })}
                 className="h-6 w-10 rounded border border-border bg-surface-1"
               />
             )}

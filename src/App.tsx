@@ -5,6 +5,7 @@ import { PreviewStage } from './components/PreviewStage';
 import { Inspector } from './components/Inspector';
 import { Timeline } from './components/timeline/Timeline';
 import { SilenceDetectionModal } from './components/modals/SilenceDetectionModal';
+import { ChromaKeyModal } from './components/modals/ChromaKeyModal';
 import { ExportModal } from './components/modals/ExportModal';
 import { ProjectSettingsModal } from './components/modals/ProjectSettingsModal';
 import { HotkeysModal } from './components/modals/HotkeysModal';
@@ -82,6 +83,7 @@ function EditorView() {
       </div>
       <Timeline />
       <SilenceDetectionModal />
+      <ChromaKeyModal />
       <ExportModal />
       <ProjectSettingsModal />
       <HotkeysModal />

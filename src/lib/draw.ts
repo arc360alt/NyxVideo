@@ -4,6 +4,7 @@ import { buildFilterString } from './filters';
 import { buildShapePath, isStrokeOnlyShape } from './shapes';
 import { resolveTransform } from './keyframes';
 import { renderTransition } from './transitions';
+import { getChromaKeyer } from './chromaKey';
 import type { CompositionEngine } from './engine';
 
 function applyTransform(ctx: CanvasRenderingContext2D, t: Transform) {
@@ -37,13 +38,27 @@ function drawMediaClip(
   applyTransform(ctx, t);
   ctx.filter = buildFilterString(clip.effects);
 
+  const chromaKey = clip.chromaKey;
   if (clip.kind === 'video') {
     const el = engine.getVideoElement(asset);
-    engine.drawVideoFrame(ctx, el, -t.width / 2, -t.height / 2, t.width, t.height);
+    if (chromaKey?.enabled) {
+      const resolved = engine.resolveVideoSource(el);
+      if (resolved) {
+        const keyed = getChromaKeyer().apply(resolved.source, resolved.width, resolved.height, chromaKey);
+        ctx.drawImage(keyed, -t.width / 2, -t.height / 2, t.width, t.height);
+      }
+    } else {
+      engine.drawVideoFrame(ctx, el, -t.width / 2, -t.height / 2, t.width, t.height);
+    }
   } else if (clip.kind === 'image') {
     const el = engine.getImageElement(asset);
     if (el.complete && el.naturalWidth > 0) {
-      ctx.drawImage(el, -t.width / 2, -t.height / 2, t.width, t.height);
+      if (chromaKey?.enabled) {
+        const keyed = getChromaKeyer().apply(el, el.naturalWidth, el.naturalHeight, chromaKey);
+        ctx.drawImage(keyed, -t.width / 2, -t.height / 2, t.width, t.height);
+      } else {
+        ctx.drawImage(el, -t.width / 2, -t.height / 2, t.width, t.height);
+      }
     }
   }
   ctx.filter = 'none';
@@ -240,14 +255,14 @@ export function drawSelectionOutline(ctx: CanvasRenderingContext2D, t: Transform
   ctx.save();
   ctx.translate(t.x, t.y);
   ctx.rotate((t.rotation * Math.PI) / 180);
-  ctx.strokeStyle = '#a78bfa';
+  ctx.strokeStyle = '#6684d4';
   ctx.lineWidth = 2;
   ctx.setLineDash([6, 4]);
   ctx.strokeRect(-t.width / 2, -t.height / 2, t.width, t.height);
   ctx.setLineDash([]);
 
   const half = HANDLE_SIZE / 2;
-  ctx.fillStyle = '#a78bfa';
+  ctx.fillStyle = '#6684d4';
   const corners: [number, number][] = [
     [-t.width / 2, -t.height / 2],
     [t.width / 2, -t.height / 2],

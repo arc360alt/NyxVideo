@@ -4,7 +4,7 @@ import type { ShapeType } from '../../types';
 import { FiType } from 'react-icons/fi';
 
 function ShapeIcon({ type }: { type: ShapeType }) {
-  const common = { fill: '#a78bfa', stroke: '#a78bfa' };
+  const common = { fill: '#6684d4', stroke: '#6684d4' };
   switch (type) {
     case 'rect':
       return <rect x="6" y="10" width="28" height="20" rx="2" {...common} />;
@@ -24,10 +24,10 @@ function ShapeIcon({ type }: { type: ShapeType }) {
     case 'hexagon':
       return <polygon points="12,6 28,6 36,20 28,34 12,34 4,20" {...common} />;
     case 'line':
-      return <line x1="6" y1="20" x2="34" y2="20" stroke="#a78bfa" strokeWidth="3" />;
+      return <line x1="6" y1="20" x2="34" y2="20" stroke="#6684d4" strokeWidth="3" />;
     case 'arrow':
       return (
-        <g stroke="#a78bfa" strokeWidth="3" fill="none">
+        <g stroke="#6684d4" strokeWidth="3" fill="none">
           <line x1="6" y1="20" x2="30" y2="20" />
           <polyline points="22,12 30,20 22,28" />
         </g>

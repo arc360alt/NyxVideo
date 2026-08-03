@@ -122,9 +122,7 @@ export function HomePage() {
       )}
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
         <div>
-          <span className="bg-gradient-to-br from-violet-400 to-fuchsia-500 bg-clip-text text-2xl font-bold text-transparent">
-            NyxVideo
-          </span>
+          <span className="text-2xl font-semibold tracking-tight text-fg">NyxVideo</span>
           <p className="mt-0.5 text-xs text-fg-faint">Your projects, saved locally in this browser.</p>
         </div>
         <div className="flex gap-2">

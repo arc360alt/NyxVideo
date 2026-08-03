@@ -7,7 +7,6 @@ import {
   AudioBufferSource,
   getFirstEncodableVideoCodec,
   getFirstEncodableAudioCodec,
-  QUALITY_HIGH,
 } from 'mediabunny';
 import type { Project } from '../types';
 import { getEngine } from './engine';
@@ -16,10 +15,14 @@ import { projectDuration } from './time';
 import { mixdownAudio, projectHasAudibleAudio, EXPORT_AUDIO_SAMPLE_RATE } from './audioMixdown';
 import { getActiveVideoEntries, buildAssetFrameSources } from './exportFrames';
 import { ExportCancelledError } from './exportCancelled';
+import { computeExportResolution, qualityToMediabunny, type ExportQuality } from './exportQuality';
 
 export interface FastExportOptions {
   fps: number;
   format: 'webm' | 'mp4';
+  quality?: ExportQuality;
+  /** Target export height in pixels (e.g. 1080), or omit/null to export at the project's own resolution. */
+  resolutionHeight?: number | null;
   onProgress?: (phase: 'audio' | 'render', ratio: number) => void;
   signal?: AbortSignal;
 }
@@ -38,6 +41,7 @@ export function isFastExportSupported(): boolean {
  */
 export async function exportProjectFast(project: Project, opts: FastExportOptions): Promise<Blob> {
   const { fps, format, onProgress, signal } = opts;
+  const quality = qualityToMediabunny(opts.quality ?? 'high');
   if (signal?.aborted) throw new ExportCancelledError();
 
   const duration = projectDuration(project);
@@ -46,15 +50,33 @@ export async function exportProjectFast(project: Project, opts: FastExportOption
   const engine = getEngine();
   await engine.warm(project);
 
-  const canvas = document.createElement('canvas');
-  canvas.width = project.width;
-  canvas.height = project.height;
-  const ctx = canvas.getContext('2d')!;
+  // Composition always happens at the project's own resolution (clip transforms are authored in
+  // that coordinate space) — a downscaled export target is a second, smaller canvas that the first
+  // is blitted onto each frame, so exporting at e.g. 720p from a 4K project is cheaper to encode
+  // without needing to touch any of the drawing/positioning math.
+  const { width: outputWidth, height: outputHeight } = computeExportResolution(
+    project.width,
+    project.height,
+    opts.resolutionHeight ?? null,
+  );
+  const needsDownscale = outputWidth !== project.width || outputHeight !== project.height;
+
+  const nativeCanvas = document.createElement('canvas');
+  nativeCanvas.width = project.width;
+  nativeCanvas.height = project.height;
+  const nativeCtx = nativeCanvas.getContext('2d')!;
+
+  const outputCanvas = needsDownscale ? document.createElement('canvas') : nativeCanvas;
+  if (needsDownscale) {
+    outputCanvas.width = outputWidth;
+    outputCanvas.height = outputHeight;
+  }
+  const outputCtx = needsDownscale ? outputCanvas.getContext('2d')! : nativeCtx;
 
   const videoCodec = await getFirstEncodableVideoCodec(format === 'mp4' ? ['avc', 'hevc'] : ['vp9', 'vp8'], {
-    width: project.width,
-    height: project.height,
-    bitrate: QUALITY_HIGH,
+    width: outputWidth,
+    height: outputHeight,
+    bitrate: quality,
   });
   if (!videoCodec) throw new Error('This browser cannot encode video for export.');
 
@@ -67,7 +89,7 @@ export async function exportProjectFast(project: Project, opts: FastExportOption
     ? await getFirstEncodableAudioCodec(format === 'mp4' ? ['aac', 'opus'] : ['opus', 'vorbis'], {
         numberOfChannels: 2,
         sampleRate: EXPORT_AUDIO_SAMPLE_RATE,
-        bitrate: QUALITY_HIGH,
+        bitrate: quality,
       })
     : null;
   if (wantsAudio && !audioCodec) {
@@ -81,12 +103,12 @@ export async function exportProjectFast(project: Project, opts: FastExportOption
     target: new BufferTarget(),
   });
 
-  const videoSource = new CanvasSource(canvas, { codec: videoCodec, bitrate: QUALITY_HIGH });
+  const videoSource = new CanvasSource(outputCanvas, { codec: videoCodec, bitrate: quality });
   output.addVideoTrack(videoSource);
 
   let audioSource: AudioBufferSource | null = null;
   if (audioCodec) {
-    audioSource = new AudioBufferSource({ codec: audioCodec, bitrate: QUALITY_HIGH });
+    audioSource = new AudioBufferSource({ codec: audioCodec, bitrate: quality });
     output.addAudioTrack(audioSource);
   }
 
@@ -99,6 +121,7 @@ export async function exportProjectFast(project: Project, opts: FastExportOption
   signal?.addEventListener('abort', onAbort, { once: true });
 
   try {
+    const t0 = performance.now();
     if (audioSource) {
       onProgress?.('audio', 0);
       const mixed = await mixdownAudio(project, duration, EXPORT_AUDIO_SAMPLE_RATE);
@@ -106,6 +129,8 @@ export async function exportProjectFast(project: Project, opts: FastExportOption
       await audioSource.add(mixed);
       onProgress?.('audio', 1);
     }
+    const t1 = performance.now();
+    console.log(`[export perf] audio mixdown: ${(t1 - t0).toFixed(0)}ms`);
 
     const assetById = new Map(project.assets.map((a) => [a.id, a]));
     const frameDuration = 1 / fps;
@@ -116,9 +141,15 @@ export async function exportProjectFast(project: Project, opts: FastExportOption
     // seeking a live <video> element once per output frame, which is what made a 17-minute timeline
     // take vastly longer than 17 minutes to render (thousands of individual seek+decode round trips).
     const frameSources = await buildAssetFrameSources(project, frameCount, frameDuration, duration, assetById);
+    const t2 = performance.now();
+    console.log(`[export perf] frame source setup: ${(t2 - t1).toFixed(0)}ms`);
+    for (const [assetId, source] of frameSources) {
+      console.log(`[export perf] asset ${assetId}: ${source ? 'FAST sequential decode' : 'FALLBACK per-frame seek (slow!)'}`);
+    }
     if (signal?.aborted) throw new ExportCancelledError();
 
     try {
+      let lastLog = performance.now();
       for (let i = 0; i < frameCount; i++) {
         if (signal?.aborted) throw new ExportCancelledError();
         const t = Math.min(duration, i * frameDuration);
@@ -136,13 +167,27 @@ export async function exportProjectFast(project: Project, opts: FastExportOption
         }
 
         if (signal?.aborted) throw new ExportCancelledError();
-        drawFrame(ctx, engine, project, t, {});
+        drawFrame(nativeCtx, engine, project, t, {});
+        if (needsDownscale) outputCtx.drawImage(nativeCanvas, 0, 0, outputWidth, outputHeight);
         await videoSource.add(t, frameDuration);
         onProgress?.('render', (i + 1) / frameCount);
+
+        if (i > 0 && i % 60 === 0) {
+          const now = performance.now();
+          console.log(
+            `[export perf] frame ${i}/${frameCount}: ${(now - lastLog).toFixed(0)}ms for last 60 frames (${((now - lastLog) / 60).toFixed(1)}ms/frame)`,
+          );
+          lastLog = now;
+        }
       }
+      const t3 = performance.now();
+      console.log(`[export perf] frame loop total: ${(t3 - t2).toFixed(0)}ms for ${frameCount} frames (${((t3 - t2) / frameCount).toFixed(1)}ms/frame avg)`);
 
       if (signal?.aborted) throw new ExportCancelledError();
       await output.finalize();
+      const t4 = performance.now();
+      console.log(`[export perf] finalize: ${(t4 - t3).toFixed(0)}ms`);
+      console.log(`[export perf] TOTAL: ${(t4 - t0).toFixed(0)}ms`);
     } finally {
       for (const source of frameSources.values()) source?.dispose();
       engine.clearExportFrameOverrides();

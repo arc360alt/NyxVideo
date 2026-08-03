@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { Modal } from './Modal';
+import { ColorInput } from '../ColorInput';
 
 const RESOLUTION_PRESETS = [
   { label: '1920 × 1080 (Landscape HD)', w: 1920, h: 1080 },
@@ -135,10 +136,9 @@ export function ProjectSettingsModal() {
             </button>
           </div>
           {project.background.mode === 'color' && (
-            <input
-              type="color"
+            <ColorInput
               value={project.background.color}
-              onChange={(e) => updateProjectSettings({ background: { color: e.target.value } })}
+              onChange={(v) => updateProjectSettings({ background: { color: v } })}
               className="mt-2 h-8 w-full rounded border border-border bg-surface-1"
             />
           )}

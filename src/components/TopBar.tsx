@@ -48,9 +48,7 @@ export function TopBar() {
         >
           <FaHouse size={15} />
         </button>
-        <span className="bg-gradient-to-br from-violet-400 to-fuchsia-500 bg-clip-text text-lg font-bold text-transparent">
-          NyxVideo
-        </span>
+        <span className="text-lg font-semibold tracking-tight text-fg">NyxVideo</span>
         {editing ? (
           <input
             autoFocus

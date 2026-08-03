@@ -56,6 +56,16 @@ function ClipBlockImpl({ clip, pxPerSecond, asset, trackRowRefs, tracksMeta }: P
   const previewRef = useRef<HTMLDivElement>(null);
   const fadeInRef = useRef<HTMLDivElement>(null);
   const fadeOutRef = useRef<HTMLDivElement>(null);
+  const highlightedRowRef = useRef<HTMLDivElement | null>(null);
+
+  const clearRowHighlight = () => {
+    const row = highlightedRowRef.current;
+    if (row) {
+      row.style.outline = '';
+      row.style.outlineOffset = '';
+    }
+    highlightedRowRef.current = null;
+  };
 
   const selected = selectedClipIds.includes(clip.id);
   const Icon = KIND_ICON[clip.kind];
@@ -93,6 +103,10 @@ function ClipBlockImpl({ clip, pxPerSecond, asset, trackRowRefs, tracksMeta }: P
       if (drag.kind === 'move') {
         let targetTrackId = drag.startClip.trackId;
         if (!drag.groupIds) {
+          // Pick whichever eligible row the pointer is over right now; if it's over a gap or a
+          // row that can't take this clip's kind, keep the last-known-good target instead of
+          // snapping back to the origin track, so a brief excursion off a row edge doesn't jitter
+          // the preview.
           for (const meta of tracksMeta) {
             if (meta.locked) continue;
             const rowEl = trackRowRefs.current.get(meta.id);
@@ -109,6 +123,32 @@ function ClipBlockImpl({ clip, pxPerSecond, asset, trackRowRefs, tracksMeta }: P
         el.style.left = `${newStart * pxPerSecond}px`;
         el.dataset.pendingStart = String(newStart);
         el.dataset.pendingTrack = targetTrackId;
+
+        if (!drag.groupIds) {
+          // Visually preview the drop by offsetting the clip vertically into the hovered row
+          // (it's still DOM-parented to its origin row, so a high z-index keeps it drawing on
+          // top regardless of paint order) and ring it red/violet depending on whether the
+          // current track+position combo would actually be accepted.
+          const sourceRow = trackRowRefs.current.get(drag.startClip.trackId);
+          const targetRow = trackRowRefs.current.get(targetTrackId);
+          if (sourceRow && targetRow) {
+            const dy = targetRow.getBoundingClientRect().top - sourceRow.getBoundingClientRect().top;
+            el.style.transform = dy !== 0 ? `translateY(${dy}px)` : '';
+          }
+          el.style.zIndex = targetTrackId !== drag.startClip.trackId ? '40' : '';
+
+          const valid = useProjectStore.getState().canMoveClip(clip.id, targetTrackId, newStart);
+          el.style.boxShadow = valid ? '' : '0 0 0 2px #ef4444';
+
+          if (highlightedRowRef.current !== targetRow) {
+            clearRowHighlight();
+            highlightedRowRef.current = targetRow ?? null;
+          }
+          if (targetRow) {
+            targetRow.style.outline = `2px solid ${valid ? 'rgba(167,139,250,0.7)' : 'rgba(239,68,68,0.7)'}`;
+            targetRow.style.outlineOffset = '-2px';
+          }
+        }
       } else if (drag.kind === 'trim-start') {
         let newStart = Math.max(0, drag.startClip.start + dxTime);
         if (snapEnabled) newStart = snapValue(newStart, snapPoints, snapThreshold);
@@ -143,6 +183,19 @@ function ClipBlockImpl({ clip, pxPerSecond, asset, trackRowRefs, tracksMeta }: P
             const pendingTrack = el.dataset.pendingTrack ?? drag.startClip.trackId;
             moveClip(clip.id, pendingTrack, pendingStart);
           }
+          // The store rejects invalid drops (locked/kind-mismatched track, overlap) by returning
+          // state unchanged, which means React never re-renders to correct this element's dragged
+          // inline styles — so always re-sync them to whatever the clip's true position actually
+          // ended up being, rather than trusting the last (possibly-rejected) drag position.
+          const trueClip = useProjectStore
+            .getState()
+            .project.tracks.flatMap((t) => t.clips)
+            .find((c) => c.id === clip.id);
+          el.style.left = `${(trueClip?.start ?? drag.startClip.start) * pxPerSecond}px`;
+          el.style.transform = '';
+          el.style.zIndex = '';
+          el.style.boxShadow = '';
+          clearRowHighlight();
         } else if (drag.kind === 'trim-start') {
           trimClipEdge(clip.id, 'start', Number(el.dataset.pendingTrim ?? drag.startClip.start));
         } else if (drag.kind === 'trim-end') {
