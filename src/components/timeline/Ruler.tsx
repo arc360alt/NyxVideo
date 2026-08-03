@@ -34,7 +34,11 @@ export function Ruler({ totalWidth, headerWidth }: Props) {
   const [editDraft, setEditDraft] = useState('');
 
   const interval = pickInterval(pxPerSecond);
-  const count = Math.ceil(totalWidth / pxPerSecond / interval) + 1;
+  const rawCount = Math.ceil(totalWidth / pxPerSecond / interval) + 1;
+  // A clip with a non-finite duration (e.g. a browser briefly reporting Infinity for a freshly
+  // recorded voice note) would otherwise propagate into an invalid array length here and crash
+  // the whole app — degrade to an empty ruler instead of throwing.
+  const count = Number.isFinite(rawCount) ? rawCount : 0;
 
   const scrub = (clientX: number, target: HTMLDivElement) => {
     const rect = target.getBoundingClientRect();

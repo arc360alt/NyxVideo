@@ -72,9 +72,12 @@ export function MediaTab() {
     setRecording(false);
     setProcessingRecording(true);
     try {
-      const blob = await mic.stop();
+      const { blob, duration } = await mic.stop();
       const file = new File([blob], `Voice Note ${new Date().toLocaleTimeString()}`, { type: blob.type });
       const asset = await probeMediaFile(file);
+      // Trust the wall-clock recording time over whatever probeMediaFile's browser-level duration
+      // detection came up with — Firefox never recovers a correct duration for MediaRecorder blobs.
+      if (duration > 0) asset.duration = duration;
       addAsset(asset);
       addMediaToTimeline(asset.id, { start: currentTime });
     } catch (err) {

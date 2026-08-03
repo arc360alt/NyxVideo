@@ -11,3 +11,9 @@ A Web basied video editor packed full of all the features to create videos and p
 <img src="https://github-profile-stuff.vercel.app/project-stats?repo=arc360alt%2FNyxVideo&theme=dark" alt="Repo Stats for arc360alt/NyxVideo" width="460" />
 
 <img src="https://github-profile-stuff.vercel.app/project-contributors?repo=arc360alt%2FNyxVideo&theme=dark" alt="Contributors for arc360alt/NyxVideo" width="420" />
+
+## Supported Platforms
+
+- PC: Chrome Only
+- Mobile: No support
+- Tablet: Chrome Only

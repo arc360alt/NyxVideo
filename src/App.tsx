@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { EnvironmentWarning } from './components/EnvironmentWarning';
 import { TopBar } from './components/TopBar';
 import { LeftPanel } from './components/panels/LeftPanel';
 import { PreviewStage } from './components/PreviewStage';
@@ -99,11 +100,17 @@ function EditorView() {
 
 export default function App() {
   const view = useLibraryStore((s) => s.view);
-  if (view === 'editor') return <EditorView />;
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-surface-0 text-fg">
-      <SiteTopBar />
-      {view === 'landing' ? <LandingPage /> : <ProjectsPage />}
-    </div>
+    <>
+      <EnvironmentWarning />
+      {view === 'editor' ? (
+        <EditorView />
+      ) : (
+        <div className="flex h-screen w-screen flex-col overflow-hidden bg-surface-0 text-fg">
+          <SiteTopBar />
+          {view === 'landing' ? <LandingPage /> : <ProjectsPage />}
+        </div>
+      )}
+    </>
   );
 }
