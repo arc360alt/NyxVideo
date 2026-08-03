@@ -1,5 +1,6 @@
 import { useLibraryStore } from '../../store/useLibraryStore';
 import { FiArrowRight } from 'react-icons/fi';
+import { FaGithub } from 'react-icons/fa6';
 
 export function LandingPage() {
   const goToProjects = useLibraryStore((s) => s.goToProjects);
@@ -26,13 +27,25 @@ export function LandingPage() {
           A full-featured video editor that runs entirely in your browser. Cut, layer, and export your projects
           without installing anything.
         </p>
-        <button
-          onClick={() => void goToProjects()}
-          className="group mt-2 flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-8px_rgba(255,255,255,0.6)] active:translate-y-0"
-        >
-          Go to projects
-          <FiArrowRight size={14} className="transition-transform duration-200 group-hover:translate-x-1" />
-        </button>
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            onClick={() => void goToProjects()}
+            className="group flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-black transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-8px_rgba(255,255,255,0.6)] active:translate-y-0"
+          >
+            Go to projects
+            <FiArrowRight size={14} className="transition-transform duration-200 group-hover:translate-x-1" />
+          </button>
+          <a
+            href="https://github.com/arc360alt/NyxVideo"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View on GitHub"
+            aria-label="View on GitHub"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-border-strong text-fg-muted transition-all duration-200 hover:-translate-y-0.5 hover:border-fg-muted hover:text-fg"
+          >
+            <FaGithub size={18} />
+          </a>
+        </div>
       </div>
     </div>
   );
