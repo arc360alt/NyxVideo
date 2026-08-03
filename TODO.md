@@ -1,2 +1,3 @@
 - Add more text styling features
 - Fix the editor lagging like hell even on a good CPU and GPU when theres lots of clips (seen when using the Silence Detection feature)
+- Firefox support (its completly brkoen rn)
