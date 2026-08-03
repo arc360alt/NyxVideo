@@ -107,6 +107,7 @@ interface EditorState {
   selectedClipId: string | null;
   selectedClipIds: string[];
   selectedTransitionId: string | null;
+  clipboard: Clip[] | null;
   rippleDeleteEnabled: boolean;
   snapEnabled: boolean;
   autoScrollEnabled: boolean;
@@ -156,6 +157,8 @@ interface EditorState {
   moveSelectedClips: (clipIds: string[], deltaTime: number) => void;
   deleteSelectedClips: () => void;
   duplicateSelectedClips: () => void;
+  copySelectedClips: () => void;
+  pasteClipboard: () => void;
   applyTransition: (trackId: string, fromClipId: string, toClipId: string, type: TransitionType, duration?: number) => void;
   updateTransition: (id: string, partial: Partial<Pick<Transition, 'type' | 'duration'>>) => void;
   removeTransition: (id: string) => void;
@@ -228,6 +231,7 @@ export const useProjectStore = create<EditorState>((set, get) => ({
   selectedClipId: null,
   selectedClipIds: [],
   selectedTransitionId: null,
+  clipboard: null,
   rippleDeleteEnabled: localStorage.getItem('nyxvideo:rippleDelete') === 'true',
   snapEnabled: localStorage.getItem('nyxvideo:snapEnabled') !== 'false',
   autoScrollEnabled: localStorage.getItem('nyxvideo:autoScroll') !== 'false',
@@ -259,6 +263,7 @@ export const useProjectStore = create<EditorState>((set, get) => ({
       selectedClipId: null,
       selectedClipIds: [],
       selectedTransitionId: null,
+      clipboard: null,
       silenceModalClipId: null,
       chromaKeyModalClipId: null,
     });
@@ -274,6 +279,7 @@ export const useProjectStore = create<EditorState>((set, get) => ({
       selectedClipId: null,
       selectedClipIds: [],
       selectedTransitionId: null,
+      clipboard: null,
       silenceModalClipId: null,
       chromaKeyModalClipId: null,
     });
@@ -990,6 +996,53 @@ export const useProjectStore = create<EditorState>((set, get) => ({
         });
         return { ...t, clips: [...t.clips, ...copies] };
       });
+      return {
+        project: { ...s.project, tracks },
+        selectedClipId: newIds.length === 1 ? newIds[0] : null,
+        selectedClipIds: newIds,
+      };
+    }),
+
+  copySelectedClips: () =>
+    set((s) => {
+      const ids = new Set(s.selectedClipIds.length > 0 ? s.selectedClipIds : s.selectedClipId ? [s.selectedClipId] : []);
+      if (ids.size === 0) return s;
+      const clips = s.project.tracks.flatMap((t) => t.clips).filter((c) => ids.has(c.id));
+      if (clips.length === 0) return s;
+      return { clipboard: clips.map((c) => ({ ...c })) };
+    }),
+
+  // Pastes at the playhead, preserving each clip's original track and the relative spacing
+  // between clips (so a multi-clip copy keeps its arrangement) — falling back to the end of the
+  // clip's track, same as addMediaToTimeline, if the playhead position would overlap something.
+  pasteClipboard: () =>
+    set((s) => {
+      const clipboard = s.clipboard;
+      if (!clipboard || clipboard.length === 0) return s;
+      const earliestStart = Math.min(...clipboard.map((c) => c.start));
+      const pasteBase = s.currentTime;
+      const newIds: string[] = [];
+      let tracks = s.project.tracks;
+
+      for (const original of clipboard) {
+        let targetTrack = tracks.find((t) => t.id === original.trackId);
+        if (!targetTrack || targetTrack.locked) {
+          const wantKind: TrackKind = original.kind === 'audio' ? 'audio' : 'video';
+          targetTrack = tracks.find((t) => t.kind === wantKind && !t.locked);
+        }
+        if (!targetTrack) continue;
+
+        let start = Math.max(0, pasteBase + (original.start - earliestStart));
+        if (overlaps(targetTrack, start, original.duration, undefined, s.project.transitions)) {
+          start = trackEnd(targetTrack);
+        }
+        const copy: Clip = { ...original, id: newId(), trackId: targetTrack.id, start };
+        newIds.push(copy.id);
+        const tid = targetTrack.id;
+        tracks = tracks.map((t) => (t.id === tid ? { ...t, clips: [...t.clips, copy] } : t));
+      }
+
+      if (newIds.length === 0) return s;
       return {
         project: { ...s.project, tracks },
         selectedClipId: newIds.length === 1 ? newIds[0] : null,

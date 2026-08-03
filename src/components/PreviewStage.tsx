@@ -28,7 +28,7 @@ const PREVIEW_SNAP_THRESHOLD = 14;
 
 type GuideType = 'center' | 'edge-low' | 'edge-high';
 
-/** Picks the closest candidate within range, if any — a single reusable snap primitive for both axes. */
+/** Picks the closest candidate within range, if any. a single reusable snap primitive for both axes. */
 function pickSnap(value: number, candidates: { value: number; guide: GuideType }[], threshold: number): { value: number; guide: GuideType | null } {
   let best = { value, guide: null as GuideType | null };
   let bestDist = threshold;
@@ -55,7 +55,7 @@ function snapCenterAxis(center: number, halfSize: number, canvasSize: number, th
   );
 }
 
-/** Snaps a raw point on one axis to the canvas's own center or edges — used while resizing, where the dragged corner IS the point that should feel magnetic. */
+/** Snaps a raw point on one axis to the canvas's own center or edges. used while resizing, where the dragged corner IS the point that should feel magnetic. */
 function snapPointAxis(value: number, canvasSize: number, threshold: number) {
   return pickSnap(
     value,
@@ -129,7 +129,7 @@ export function PreviewStage() {
 
   // CSS aspect-ratio + width:100% + max-height doesn't reliably renegotiate width once max-height
   // clamps the box in a flex layout (width was already a definite 100%, so browsers don't always
-  // shrink it back down to match) — that's what was stretching the preview at larger viewport sizes.
+  // shrink it back down to match). that's what was stretching the preview at larger viewport sizes.
   // Measuring the available box in JS and computing an explicit pixel size (classic "contain" fit)
   // sidesteps that entirely: the canvas's CSS size is always exactly the project's aspect ratio.
   useEffect(() => {
@@ -281,7 +281,7 @@ export function PreviewStage() {
       let px = pt.x;
       let py = pt.y;
       if (snapEnabled) {
-        // Snap the dragged corner itself to the canvas's own edges/center — the corner is what
+        // Snap the dragged corner itself to the canvas's own edges/center. the corner is what
         // should feel magnetic while resizing, not the clip's (still-moving) center or edges.
         const snapPx = snapPointAxis(px, project.width, PREVIEW_SNAP_THRESHOLD);
         const snapPy = snapPointAxis(py, project.height, PREVIEW_SNAP_THRESHOLD);
@@ -336,7 +336,7 @@ export function PreviewStage() {
             className="h-full w-full rounded-md border border-border bg-black shadow-2xl"
             style={{ touchAction: 'none' }}
           />
-          {/* Snap guides — positioned as a percentage of the canvas box so they track it exactly
+          {/* Snap guides. positioned as a percentage of the canvas box so they track it exactly
               regardless of how the canvas's native resolution maps to its displayed CSS size. */}
           <div ref={guideVRef} className="pointer-events-none absolute inset-y-0 w-px bg-violet-400 opacity-0" style={{ left: '50%' }} />
           <div ref={guideHRef} className="pointer-events-none absolute inset-x-0 h-px bg-violet-400 opacity-0" style={{ top: '50%' }} />

@@ -23,7 +23,7 @@ export interface ProjectSummary {
   thumbnail?: string;
 }
 
-type View = 'home' | 'editor';
+type View = 'landing' | 'projects' | 'editor';
 
 /** Resolves after the browser has actually painted the current frame, not just queued a render. */
 function nextPaint(): Promise<void> {
@@ -44,7 +44,8 @@ interface LibraryState {
   openProject: (id: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   duplicateProject: (id: string) => Promise<void>;
-  goHome: () => Promise<void>;
+  goToProjects: () => Promise<void>;
+  goToLanding: () => void;
   renameProject: (id: string, name: string) => Promise<void>;
   importProject: (project: Project) => Promise<void>;
 }
@@ -66,7 +67,7 @@ async function hydrateAssets(project: Project, projectId: string): Promise<Proje
 }
 
 export const useLibraryStore = create<LibraryState>((set, get) => ({
-  view: 'home',
+  view: 'landing',
   projects: [],
   loading: false,
   opening: false,
@@ -127,7 +128,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     if (useProjectStore.getState().projectId === id) {
       useProjectStore.getState().clearProject();
     useCaptionsStore.getState().clear();
-      set({ view: 'home' });
+      set({ view: 'projects' });
     }
     void get().refreshList();
   },
@@ -152,12 +153,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     void get().refreshList();
   },
 
-  goHome: async () => {
+  goToProjects: async () => {
     useProjectStore.getState().setPlaying(false);
     await flushSave();
-    set({ view: 'home' });
+    set({ view: 'projects' });
     void get().refreshList();
   },
+
+  goToLanding: () => set({ view: 'landing' }),
 
   renameProject: async (id, name) => {
     const stored = await getProject(id);

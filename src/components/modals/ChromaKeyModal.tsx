@@ -69,7 +69,7 @@ export function ChromaKeyModal() {
     }
   };
 
-  // Seeks the shared pooled element to the previewed frame (video only — images have nothing to seek).
+  // Seeks the shared pooled element to the previewed frame (video only. images have nothing to seek).
   useEffect(() => {
     if (!clip || !asset) return;
     if (clip.kind !== 'video') {
@@ -126,7 +126,7 @@ export function ChromaKeyModal() {
       const result = await new window.EyeDropper().open();
       setChromaKey(clip.id, { color: result.sRGBHex, enabled: true });
     } catch {
-      // user cancelled (pressed Escape) — nothing to do
+      // user cancelled (pressed Escape). nothing to do
     } finally {
       setEyedropperBusy(false);
     }

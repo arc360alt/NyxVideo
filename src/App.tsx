@@ -9,7 +9,9 @@ import { ChromaKeyModal } from './components/modals/ChromaKeyModal';
 import { ExportModal } from './components/modals/ExportModal';
 import { ProjectSettingsModal } from './components/modals/ProjectSettingsModal';
 import { HotkeysModal } from './components/modals/HotkeysModal';
-import { HomePage } from './components/home/HomePage';
+import { LandingPage } from './components/home/LandingPage';
+import { ProjectsPage } from './components/home/ProjectsPage';
+import { SiteTopBar } from './components/home/SiteTopBar';
 import { usePlaybackClock } from './hooks/usePlaybackClock';
 import { useHotkeys } from './hooks/useHotkeys';
 import { useProjectStore } from './store/useProjectStore';
@@ -23,6 +25,8 @@ function EditorView() {
   const togglePlay = useProjectStore((s) => s.togglePlay);
   const deleteSelectedClips = useProjectStore((s) => s.deleteSelectedClips);
   const duplicateSelectedClips = useProjectStore((s) => s.duplicateSelectedClips);
+  const copySelectedClips = useProjectStore((s) => s.copySelectedClips);
+  const pasteClipboard = useProjectStore((s) => s.pasteClipboard);
   const selectAllClips = useProjectStore((s) => s.selectAllClips);
   const toggleRippleDelete = useProjectStore((s) => s.toggleRippleDelete);
   const toggleSnap = useProjectStore((s) => s.toggleSnap);
@@ -53,6 +57,8 @@ function EditorView() {
     skipEnd: () => setCurrentTime(duration),
     deleteClip: deleteSelectedClips,
     duplicateClip: duplicateSelectedClips,
+    copyClip: copySelectedClips,
+    pasteClip: pasteClipboard,
     selectAll: selectAllClips,
     toggleRippleDelete: toggleRippleDelete,
     toggleSnap: toggleSnap,
@@ -93,5 +99,11 @@ function EditorView() {
 
 export default function App() {
   const view = useLibraryStore((s) => s.view);
-  return view === 'home' ? <HomePage /> : <EditorView />;
+  if (view === 'editor') return <EditorView />;
+  return (
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-surface-0 text-fg">
+      <SiteTopBar />
+      {view === 'landing' ? <LandingPage /> : <ProjectsPage />}
+    </div>
+  );
 }

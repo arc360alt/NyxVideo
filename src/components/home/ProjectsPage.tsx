@@ -87,7 +87,7 @@ function ProjectCard({ project }: { project: ProjectSummary }) {
   );
 }
 
-export function HomePage() {
+export function ProjectsPage() {
   const projects = useLibraryStore((s) => s.projects);
   const loading = useLibraryStore((s) => s.loading);
   const opening = useLibraryStore((s) => s.opening);
@@ -113,7 +113,7 @@ export function HomePage() {
   };
 
   return (
-    <div className="relative flex h-screen w-screen flex-col overflow-y-auto bg-surface-0 text-fg">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface-0 text-fg">
       {opening && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-surface-0/90 backdrop-blur-sm">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
@@ -122,7 +122,7 @@ export function HomePage() {
       )}
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
         <div>
-          <span className="text-2xl font-semibold tracking-tight text-fg">NyxVideo</span>
+          <span className="text-lg font-semibold tracking-tight text-fg">Projects</span>
           <p className="mt-0.5 text-xs text-fg-faint">Your projects, saved locally in this browser.</p>
         </div>
         <div className="flex gap-2">

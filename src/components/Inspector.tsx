@@ -228,7 +228,7 @@ export function Inspector() {
       <div>
         <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-fg-faint">Fade</div>
         <p className="mb-1.5 text-[10px] text-fg-faint">
-          Fades this clip in or out on its own — no partner clip needed, e.g. for a "fade to black" ending.
+          Fades this clip in or out on its own. no partner clip needed, e.g. for a "fade to black" ending.
         </p>
         <label className="flex flex-col gap-1 text-xs text-fg-subtle">
           <span className="flex justify-between">

@@ -19,6 +19,8 @@ export const HOTKEY_ACTIONS: HotkeyAction[] = [
   { id: 'freezeFrame', label: 'Insert freeze frame', defaultKey: 'F', group: 'Editing' },
   { id: 'deleteClip', label: 'Delete selected clip(s)', defaultKey: 'Delete', group: 'Editing' },
   { id: 'duplicateClip', label: 'Duplicate selected clip(s)', defaultKey: 'Ctrl+D', group: 'Editing' },
+  { id: 'copyClip', label: 'Copy selected clip(s)', defaultKey: 'Ctrl+C', group: 'Editing' },
+  { id: 'pasteClip', label: 'Paste clip(s) at playhead', defaultKey: 'Ctrl+V', group: 'Editing' },
   { id: 'selectAll', label: 'Select all clips', defaultKey: 'Ctrl+A', group: 'Editing' },
   { id: 'toggleRippleDelete', label: 'Toggle ripple delete', defaultKey: 'R', group: 'Editing' },
   { id: 'toggleSnap', label: 'Toggle clip snapping', defaultKey: 'N', group: 'Editing' },

@@ -19,7 +19,7 @@ export function TopBar() {
   const canRedo = useProjectStore((s) => s.canRedo);
   const undo = useProjectStore((s) => s.undo);
   const redo = useProjectStore((s) => s.redo);
-  const goHome = useLibraryStore((s) => s.goHome);
+  const goToProjects = useLibraryStore((s) => s.goToProjects);
   const themeMode = useThemeStore((s) => s.mode);
   const toggleTheme = useThemeStore((s) => s.toggle);
   const [editing, setEditing] = useState(false);
@@ -42,7 +42,7 @@ export function TopBar() {
     <div className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-surface-0 px-4">
       <div className="flex items-center gap-3">
         <button
-          onClick={() => void goHome()}
+          onClick={() => void goToProjects()}
           title="Back to projects"
           className="rounded p-2 text-fg-subtle hover:bg-surface-1 hover:text-fg"
         >
